@@ -86,85 +86,99 @@ def run_bot(config):
     key_delay = config.get("key_delay_sec", 0.05)
     delay_before_buyout = config.get("delay_before_buyout_sec", 0.2)
     
-    print("bot is ready! tab into your game now.")
-    print("press 'F4' to start the sniper loop.")
-    print("press 'ctrl+q' at any time to quit.")
-    
-    keyboard.wait('f4')
-    
-    print("starting in 3...")
-    time.sleep(1)
-    print("2...")
-    time.sleep(1)
-    print("1...")
-    time.sleep(1)
-    print("GO!")
-
     with mss.MSS() as sct:
         monitor = sct.monitors[1]
         region = get_region(monitor, config["scan_region"])
-        start_time_global = time.time()
-        search_count = 0
         
-        while not keyboard.is_pressed('ctrl+q'):
-            search_count += 1
-            elapsed_sec = int(time.time() - start_time_global)
-            mins, secs = divmod(elapsed_sec, 60)
-            time_str = f"{mins:02d}:{secs:02d}"
+        while True:
+            print("\n\n--- NEW SESSION ---")
+            print("bot is ready! tab into your game now.")
+            print("press 'F4' to start the sniper loop.")
+            print("press 'ctrl+q' at any time to quit.")
             
-            sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: Searching...          ")
-            sys.stdout.flush()
+            while True:
+                if keyboard.is_pressed('f4'):
+                    break
+                if keyboard.is_pressed('ctrl+q'):
+                    print("\nExiting...")
+                    sys.exit(0)
+                time.sleep(0.05)
             
-            execute_search(key_hold, key_delay)
+            print("starting in 3...")
+            time.sleep(1)
+            print("2...")
+            time.sleep(1)
+            print("1...")
+            time.sleep(1)
+            print("GO!")
+
+            start_time_global = time.time()
+            search_count = 0
             
-            sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: Waiting for results...")
-            sys.stdout.flush()
-            
-            search_start_t = time.time()
-            found_car = False
-            
-            # waiting for sample to appear OR timeout
-            while time.time() - search_start_t < timeout_sec:
+            while True:
                 if keyboard.is_pressed('ctrl+q'):
                     print("\nExiting...")
                     sys.exit(0)
                     
-                loop_start_t = time.perf_counter()
+                search_count += 1
+                elapsed_sec = int(time.time() - start_time_global)
+                mins, secs = divmod(elapsed_sec, 60)
+                time_str = f"{mins:02d}:{secs:02d}"
                 
-                # grab screen
-                sct_img = sct.grab(region)
-                img = np.array(sct_img)
-                gray_img = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
-                
-                # match template
-                res = cv2.matchTemplate(gray_img, template, cv2.TM_CCOEFF_NORMED)
-                loc = np.where(res >= threshold)
-                
-                if len(loc[0]) > 0:
-                    found_car = True
-                    break
-                
-                # maintain fps
-                elapsed = time.perf_counter() - loop_start_t
-                sleep_t = frame_time - elapsed
-                if sleep_t > 0:
-                    time.sleep(sleep_t)
-            
-            if found_car:
-                print(f"\n\n>>> CAR FOUND! <<<")
-                print(f"Total Searches : {search_count}")
-                print(f"Elapsed Time   : {time_str}")
-                print(f"Waiting {delay_before_buyout}s before buyout macro...")
-                time.sleep(delay_before_buyout)
-                execute_buyout(key_hold, key_delay)
-                print("Buyout macro executed! Bot pausing (press ctrl+c in terminal to exit).")
-                break # stop the bot because we bought it!
-            else:
-                sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: No car. Resetting...  ")
+                sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: Searching...          ")
                 sys.stdout.flush()
-                send_key('esc', key_hold, key_delay)
-                # wait for the search menu to become fully active again before searching again
-                time.sleep(delay_after_esc)
+                
+                execute_search(key_hold, key_delay)
+                
+                sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: Waiting for results...")
+                sys.stdout.flush()
+                
+                search_start_t = time.time()
+                found_car = False
+                
+                # waiting for sample to appear OR timeout
+                while time.time() - search_start_t < timeout_sec:
+                    if keyboard.is_pressed('ctrl+q'):
+                        print("\nExiting...")
+                        sys.exit(0)
+                        
+                    loop_start_t = time.perf_counter()
+                    
+                    # grab screen
+                    sct_img = sct.grab(region)
+                    img = np.array(sct_img)
+                    gray_img = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
+                    
+                    # match template
+                    res = cv2.matchTemplate(gray_img, template, cv2.TM_CCOEFF_NORMED)
+                    loc = np.where(res >= threshold)
+                    
+                    if len(loc[0]) > 0:
+                        found_car = True
+                        break
+                    
+                    # maintain fps
+                    elapsed = time.perf_counter() - loop_start_t
+                    sleep_t = frame_time - elapsed
+                    if sleep_t > 0:
+                        time.sleep(sleep_t)
+                
+                if found_car:
+                    print(f"\n\n>>> CAR FOUND! <<<")
+                    print(f"Total Searches : {search_count}")
+                    print(f"Elapsed Time   : {time_str}")
+                    print(f"Waiting {delay_before_buyout}s before buyout macro...")
+                    time.sleep(delay_before_buyout)
+                    execute_buyout(key_hold, key_delay)
+                    print("Buyout macro executed! Returning to standby mode...")
+                    time.sleep(1.0)
+                    break # go back to NEW SESSION
+                else:
+                    sys.stdout.write(f"\r[Searches: {search_count} | Time: {time_str}] Status: No car. Resetting...  ")
+                    sys.stdout.flush()
+                    send_key('esc', key_hold, key_delay)
+                    # wait for the search menu to become fully active again before searching again
+                    time.sleep(delay_after_esc)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

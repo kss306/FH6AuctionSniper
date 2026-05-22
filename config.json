@@ -10,7 +10,7 @@
     "fps_target": 30,
     "search_timeout_sec": 1.0,
     "delay_after_esc_sec": 0.6,
-    "key_hold_sec": 0.2,
-    "key_delay_sec": 0.2,
-    "delay_before_buyout_sec": 0.2
+    "key_hold_sec": 0.15,
+    "key_delay_sec": 0.15,
+    "delay_before_buyout_sec": 0.1
 }
